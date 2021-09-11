@@ -1,0 +1,224 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "id": "9a8df20f",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#First Block Class"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "id": "899c7d44",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import hashlib\n",
+    "import time\n",
+    "\n",
+    "class Block:\n",
+    "    def __init__(self,index,proof_no,prev_hash,data,timestamp=None):\n",
+    "        self.index = index #postition of the block within the chain\n",
+    "        self.proof_no = proof_no #number generated during mining\n",
+    "        self.prev_hash = prev_hash # hash of the previous block in the chain\n",
+    "        self.data = data # record of the transactions completed\n",
+    "        self.timestamp = timestamp or time.time() #timestamp of transactions\n",
+    "        \n",
+    "        \n",
+    "    @property\n",
+    "    def calculate_hash(self):\n",
+    "        block_of_string = \"{}{}{}{}{}\".format(self.index,self.proof_no, self.prev_hash,self.data,self.timestamp)\n",
+    "        \n",
+    "        return hashlib.sha256(block_of_string.encode()).hexdigest()\n",
+    "    \n",
+    "    def __repr__(self):\n",
+    "        return \"{} - {} - {} - {} - {}\".format(self.index, self.proof_no, self.prev_hash, self.data,self.timestamp)\n",
+    "    \n",
+    "    "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 35,
+   "id": "735c8075",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class BlockChain:\n",
+    "    \n",
+    "    #Constructor Method\n",
+    "    def __init__(self):\n",
+    "        self.chain = [] #Keeps all blocks\n",
+    "        self.current_data = [] #keeps all completed transactions in the block\n",
+    "        self.nodes = set() \n",
+    "        self.construct_genesis() #to construct the initial block\n",
+    "        \n",
+    "    #Constructing the Genisis Block\n",
+    "    def construct_genesis(self):\n",
+    "        self.construct_block(proof_no=0, prev_hash=0)\n",
+    "    \n",
+    "    #To create new blocks\n",
+    "    def construct_block(self, proof_no, prev_hash):\n",
+    "        block = Block(\n",
+    "            index=len(self.chain),\n",
+    "            proof_no=proof_no,\n",
+    "            prev_hash=prev_hash,\n",
+    "            data=self.current_data)\n",
+    "        self.current_data = []\n",
+    "\n",
+    "        self.chain.append(block)\n",
+    "        return block\n",
+    "    \n",
+    "    \n",
+    "    #Checking validity\n",
+    "    @staticmethod\n",
+    "    def check_validity(block, prev_block):\n",
+    "        if prev_block.index + 1 != block.index:\n",
+    "            return False\n",
+    "\n",
+    "        elif prev_block.calculate_hash != block.prev_hash:\n",
+    "            return False\n",
+    "\n",
+    "        elif not BlockChain.verifying_proof(block.proof_no, prev_block.proof_no):\n",
+    "            return False\n",
+    "\n",
+    "        elif block.timestamp <= prev_block.timestamp:\n",
+    "            return False\n",
+    "\n",
+    "        return True\n",
+    "    \n",
+    "    \n",
+    "    def new_data(self, sender, recipient, quantity):\n",
+    "        self.current_data.append({\n",
+    "            'sender': sender,\n",
+    "            'recipient': recipient,\n",
+    "            'quantity': quantity\n",
+    "        })\n",
+    "        return True\n",
+    "    \n",
+    "    @staticmethod\n",
+    "    def proof_of_work(last_proof):\n",
+    "        '''this simple algorithm identifies a number f' such that hash(ff') contain 4 leading zeroes\n",
+    "             f is the previous f'\n",
+    "             f' is the new proof\n",
+    "            '''\n",
+    "        proof_no = 0\n",
+    "        while BlockChain.verifying_proof(proof_no, last_proof) is False:\n",
+    "            proof_no += 1\n",
+    "\n",
+    "        return proof_no\n",
+    "\n",
+    "\n",
+    "    @staticmethod\n",
+    "    def verifying_proof(last_proof, proof):\n",
+    "        #verifying the proof: does hash(last_proof, proof) contain 4 leading zeroes?\n",
+    "\n",
+    "        guess = f'{last_proof}{proof}'.encode()\n",
+    "        guess_hash = hashlib.sha256(guess).hexdigest()\n",
+    "        return guess_hash[:4] == \"0000\"\n",
+    "    \n",
+    "    @property\n",
+    "    def latest_block(self):\n",
+    "        return self.chain[-1]\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 44,
+   "id": "6695ba06",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[0 - 0 - 0 - [] - 1631348231.471721]\n"
+     ]
+    }
+   ],
+   "source": [
+    "blockchain = BlockChain()\n",
+    "print(blockchain.chain)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 45,
+   "id": "1b64aaa1",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "last_block = blockchain.latest_block\n",
+    "last_proof_no = last_block.proof_no\n",
+    "proof_no = blockchain.proof_of_work(last_proof_no)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 46,
+   "id": "9ef1380f",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "blockchain.new_data(\n",
+    "    sender = \"0\",\n",
+    "    recipient=\"Quincy Larson\",\n",
+    "    quantity = 1)\n",
+    "\n",
+    "last_hash = last_block.calculate_hash\n",
+    "block = blockchain.construct_block(proof_no,last_hash)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 47,
+   "id": "9f31c39e",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[0 - 0 - 0 - [] - 1631348231.471721, 1 - 88914 - d3d8fe8ff35465677fda51da2816c3d0684df9edb5150c014301145f8eb029ac - [{'sender': '0', 'recipient': 'Quincy Larson', 'quantity': 1}] - 1631348232.5390642]\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(blockchain.chain)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "5df57e50",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.8.8"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
